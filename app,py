@@ -1,0 +1,58 @@
+import os 
+import sqlite3
+import streamlit as slt
+from dotenv import load_dotenv
+
+import google.generativeai as genai
+load_dotenv()
+
+genai.configure(api_key = os.getenv("API_KEY"))
+
+
+def get_gemini_response(qstn,prompt):
+    model = genai.GenerativeModel('gemini-pro')
+    response = model.generate_content([prompt,qstn])
+    return response.text
+
+
+def read_sql(sql,db):
+    connection = sqlite3.connect(db)
+    cur = connection.cursor()
+    cur.execute(sql)
+    rows = cur.fetchall()
+    connection.commit()
+    connection.close()
+    
+    
+    return rows
+prompt=[
+    """
+    You are an expert in converting English questions to SQL query!
+    The SQL database has the name STUDENT and has the following columns - NAME, CLASS, 
+    SECTION \n\nFor example,\nExample 1 - How many entries of records are present?, 
+    the SQL command will be something like this SELECT COUNT(*) FROM STUDENT ;
+    \nExample 2 - Tell me all the students studying in Data Science class?, 
+    the SQL command will be something like this SELECT * FROM STUDENT 
+    where CLASS="Data Science"; 
+    also the sql code should not have ``` in beginning or end and sql word in output
+    remove the last , also in the output
+
+    """
+
+
+]
+slt.set_page_config(page_title="Retrive SQL Querry")
+slt.header("Gemini APP to get SQL querry")
+
+question = slt.text_input("Ask question",key="input")
+submit = slt.button("Get SQL Query")
+
+if submit:
+    response=get_gemini_response(question,prompt[0])
+    print(response)
+    response=read_sql(response,"student.db")
+    slt.subheader("The Reponse is")
+    for row in response:
+        print(row)
+        slt.subheader(row)
+    
